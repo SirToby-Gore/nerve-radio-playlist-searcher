@@ -1,0 +1,1 @@
+../rich-stdout/main.py
