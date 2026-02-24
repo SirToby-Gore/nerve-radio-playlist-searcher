@@ -84,7 +84,7 @@ class Song:
             return 5 if self._match_text(self.title, clean_query[1:]) else 0
         if clean_query.startswith('^'):
             return 5 if self._match_text(self.genre, clean_query[1:]) else 0
-
+            
         return self._standard_score(clean_query)
 
     def _check_duration_match(self, query_time: str) -> int:
@@ -161,7 +161,10 @@ def main_loop(library: list[Song]):
     last_results: list[Song] = []
     
     while True:
-        term.print("\nHINTS: @Artist, #Title, ^Genre, &Time, /regex/ | :q, :s <file>, :r <path>", effects=[Colour.FOREGROUND_YELLOW])
+        term.print(
+            "\nHINTS: @Artist, #Title, ^Genre, &Time+sec, /regex/ | (quit) :q, (save) :s <file>, (read) :r <path>, (clear) :c",
+            effects=[Colour.FOREGROUND_YELLOW]
+        )
         try:
             query = term.input("Search: ", effects=[Effect.BOLD]).strip()
         except KeyboardInterrupt: break
@@ -177,6 +180,9 @@ def main_loop(library: list[Song]):
                 new_data = load_csv_data(arg)
                 library.extend(new_data)
                 term.success(f"Added {len(new_data)} items.")
+            elif cmd == ':c':
+                term.clear()
+                term.move_cursor(0, 0)
             continue
 
         matches = sorted([ (s.get_match_score(query), s) for s in library if s.get_match_score(query) > 0 ], key=lambda x: x[0], reverse=True)
