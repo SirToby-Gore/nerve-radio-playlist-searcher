@@ -1,6 +1,7 @@
 import csv
 import os
 import re
+import random
 from rich_stdout import Terminal, Colour, Effect
 
 # Initialize Terminal Globally
@@ -121,7 +122,7 @@ class Song:
 
     def display(self):
         term.print(f"{self.get_playlist_name()}", effects=[Colour.FOREGROUND_PURPLE], new_line=True, reset_style=False)
-        term.print(" | ", new_line=False, reset_style=True)
+        term.print(" / ", new_line=False, reset_style=True)
         term.print(f"{self.title}", effects=[Effect.BOLD, Colour.FOREGROUND_WHITE], new_line=False)
         term.print(f" - {self.artist} ", effects=[Colour.FOREGROUND_BLUE], new_line=False)
         term.print(f"[{self.genre}]", effects=[Colour.FOREGROUND_GREEN, Effect.FAINT], new_line=False)
@@ -162,7 +163,7 @@ def main_loop(library: list[Song]):
     
     while True:
         term.print(
-            "\nHINTS: @Artist, #Title, ^Genre, &Time+sec, /regex/ | (quit) :q, (save) :s <file>, (read) :r <path>, (clear) :c",
+            "\nHINTS: @Artist, #Title, ^Genre, &Time+sec, /regex/ | (quit) :q, (save) :s <file>, (read) :o <path>, (random) :r <amount> , (clear) :c",
             effects=[Colour.FOREGROUND_YELLOW]
         )
         try:
@@ -176,13 +177,21 @@ def main_loop(library: list[Song]):
             cmd, arg = parts[0].lower(), (parts[1] if len(parts) > 1 else "")
             if cmd == ':q': break
             elif cmd == ':s': save_to_csv(last_results, arg)
-            elif cmd == ':r':
+            elif cmd == ':o':
                 new_data = load_csv_data(arg)
                 library.extend(new_data)
                 term.success(f"Added {len(new_data)} items.")
             elif cmd == ':c':
                 term.clear()
                 term.move_cursor(0, 0)
+            elif cmd == ':r':
+                arg = arg or '1'
+                
+                if not arg.isnumeric():
+                    term.error(f'"{arg}" is not an integer')
+                    continue
+                for song in random.sample(library, int(arg)):
+                    song.display()
             continue
 
         matches = sorted([ (s.get_match_score(query), s) for s in library if s.get_match_score(query) > 0 ], key=lambda x: x[0], reverse=True)
