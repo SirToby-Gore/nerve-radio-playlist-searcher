@@ -163,7 +163,10 @@ def main_loop(library: list[Song]):
     
     while True:
         term.print(
-            "\nHINTS: @Artist, #Title, ^Genre, &Time+sec, /regex/ | (quit) :q, (save) :s <file>, (read) :o <path>, (random) :r <amount> , (clear) :c",
+            "\nHINTS: "
+            + "\n  @Artist, #Title, ^Genre, &Time+sec, /regex/"
+            + "\n  (quit) :q, (save) :s <file>, (open) :o <path>, (random) :r <amount> , (clear) :c"
+            + "\n  -a (artist), -d (duration), -t (title), -p (playlist)",
             effects=[Colour.FOREGROUND_YELLOW]
         )
         try:
@@ -172,9 +175,17 @@ def main_loop(library: list[Song]):
 
         if not query: continue
 
+        sort_mode: str = ''
+        
+        if len(query) > 2:
+            if query[-2] == '-' and query[-1] in "adtp":
+                sort_mode = query[-1]
+                query = query[:-2].strip()
+
         if query.startswith(':'):
             parts = query.split(' ', 1)
             cmd, arg = parts[0].lower(), (parts[1] if len(parts) > 1 else "")
+
             if cmd == ':q': break
             elif cmd == ':s': save_to_csv(last_results, arg)
             elif cmd == ':o':
@@ -194,7 +205,21 @@ def main_loop(library: list[Song]):
                     song.display()
             continue
 
-        matches = sorted([ (s.get_match_score(query), s) for s in library if s.get_match_score(query) > 0 ], key=lambda x: x[0], reverse=True)
+        matches = [(s.get_match_score(query), s) for s in library if s.get_match_score(query) > 0]
+
+        if not matches:
+            term.warning('No matches.')
+            continue
+
+        if sort_mode:
+            match sort_mode:
+                case 'a': matches.sort(key=lambda x: x[1].artist.lower())
+                case 'd': matches.sort(key=lambda x: x[1].duration_secs)
+                case 't': matches.sort(key=lambda x: x[1].title.lower())
+                case 'p': matches.sort(key=lambda x: x[1].playlist.lower())
+        
+        matches.sort(key=lambda x: x[0], reverse=True)
+
         last_results = [m[1] for m in matches]
         total = len(matches)
 
@@ -202,7 +227,6 @@ def main_loop(library: list[Song]):
             term.warning('No matches.')
             continue
 
-        # Logic: Only page if results > 30
         if total <= 30:
             term.print(f"Results ({total}):", effects=[Effect.BOLD])
             for _, song in matches: song.display()
